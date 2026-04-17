@@ -1,4 +1,4 @@
-﻿(*
+(*
   Ita IDE Plugin
 
   Copyright (c) 2014-2020 Lyna
@@ -22,6 +22,7 @@
     3. This notice may not be removed or altered from any source
     distribution.
 *)
+
 unit UItaMain;
 
 {$IF CompilerVersion >= 30.00}
@@ -35,7 +36,8 @@ uses
   System.IniFiles, System.Win.Registry, System.Rtti, System.TypInfo,
   System.Types, System.UITypes, FMX.Types, FMX.Surfaces,
   {$IF FireMonkeyVersion >= 19.0}FMX.Graphics,{$IFEND}
-  Vcl.Controls, Vcl.Graphics, Vcl.Menus, ToolsAPI, UItaConfig;
+  Vcl.Controls, Vcl.Graphics, Vcl.Menus, ToolsAPI, UItaConfig
+  ;
 
 procedure LoadBackgroundImage;
 procedure SaveSettings;
@@ -72,7 +74,10 @@ var
 implementation
 
 const
-  sEVFillRect = '@Editorcontrol@TCustomEditControl@EVFillRect$qqrrx18System@Types@TRect';
+  sEVFillRectList: array[0..1] of string = (
+    '@Editorcontrol@TCustomEditControl@EVFillRect$qqrrx18System@Types@TRect',
+    '@Editorcontrol@TCustomEditControl@EVFillRect$qqrrx18System@Types@TRectx69System@%DelphiInterface$42Toolsapi@Editor@INTACodeEditorPaintContext%');
+
   sEVScrollRect = '@Editorcontrol@TCustomEditControl@EVScrollRect$qqrp18System@Types@TRectt1ii';
   sEditControlList = '@Editorcontrol@EditControlList';
 
@@ -110,10 +115,12 @@ const
     {$IFDEF VER330}'coreide260.bpl'{$ENDIF} // 10.3 Rio
     {$IFDEF VER340}'coreide270.bpl'{$ENDIF} // 10.4 Sydney
     {$IFDEF VER350}'coreide280.bpl'{$ENDIF} // 11 Alexandria
+    {$IFDEF VER360}'coreide290.bpl'{$ENDIF} // 12 Athens
+    {$IFDEF VER370}'coreide370.bpl'{$ENDIF} // 13 Florence
     ;
 
   HighlightRegKey =
-    {$IFDEF VER230}'\Software\Embarcadero\BDS\9.0\Editor\Highlight\'{$ENDIF}  // XE2
+    {$IFDEF VER230}'\Software\Embarcadero\BDS\9.0\Editor\Highlight\' {$ENDIF} // XE2
     {$IFDEF VER240}'\Software\Embarcadero\BDS\10.0\Editor\Highlight\'{$ENDIF} // XE3
     {$IFDEF VER250}'\Software\Embarcadero\BDS\11.0\Editor\Highlight\'{$ENDIF} // XE4
     {$IFDEF VER260}'\Software\Embarcadero\BDS\12.0\Editor\Highlight\'{$ENDIF} // XE5
@@ -126,6 +133,8 @@ const
     {$IFDEF VER330}'\Software\Embarcadero\BDS\20.0\Editor\Highlight\'{$ENDIF} // 10.3 Rio
     {$IFDEF VER340}'\Software\Embarcadero\BDS\21.0\Editor\Highlight\'{$ENDIF} // 10.4 Sydney
     {$IFDEF VER350}'\Software\Embarcadero\BDS\22.0\Editor\Highlight\'{$ENDIF} // 11 Alexandria
+    {$IFDEF VER360}'\Software\Embarcadero\BDS\23.0\Editor\Highlight\'{$ENDIF} // 12 Athens
+    {$IFDEF VER370}'\Software\Embarcadero\BDS\37.0\Editor\Highlight\'{$ENDIF} // 13 Florence
     ;
   HighlightRegName = 'Background Color New';
 
@@ -296,8 +305,15 @@ begin
   hModule := GetModuleHandle(CoreIdeModuleName);
   if hModule = 0 then Exit;
 
-  TCustomEditControl_EVFillRect := GetProcAddress(hModule, sEVFillRect);
+  TCustomEditControl_EVFillRect := nil;
+  for var vEVFillRect: string in  sEVFillRectList do
+  begin
+    TCustomEditControl_EVFillRect := GetProcAddress(hModule, PWideChar(WideString(vEVFillRect)));
+    if TCustomEditControl_EVFillRect <> nil then Break;
+  end;
+
   TCustomEditControl_EVScrollRect := GetProcAddress(hModule, sEVScrollRect);
+
   EditControlList := GetProcAddress(hModule, sEditControlList);
 
   if not IsValidCodes(TCustomEditControl_EVFillRect, EVFillRectCodes) or
